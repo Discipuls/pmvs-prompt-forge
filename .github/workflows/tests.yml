@@ -1,0 +1,90 @@
+name: Tests
+
+# Запускаем тесты при каждом push и pull request.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ----------------------------------------------------------------
+  # 1. Unit-тесты: запускаются прямо на раннере GitHub (на JVM),
+  #    устройство/эмулятор не нужны.
+  # ----------------------------------------------------------------
+  unit-tests:
+    name: Unit tests (JVM)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/
+
+  # ----------------------------------------------------------------
+  # 2. UI / инструментальные тесты: на раннере GitHub нет реального
+  #    Android-устройства, поэтому собираем два APK и отправляем их
+  #    в Firebase Test Lab — облачную ферму устройств Google.
+  #
+  #    Перед запуском в репозитории нужно задать два секрета
+  #    (Settings -> Secrets and variables -> Actions):
+  #      GCP_SA_KEY      — JSON ключа сервисного аккаунта Google Cloud
+  #      GCP_PROJECT_ID  — id проекта Firebase / Google Cloud
+  # ----------------------------------------------------------------
+  ui-tests-firebase:
+    name: UI tests (Firebase Test Lab)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Собираем APK приложения и APK с тестами.
+      - name: Build app and test APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Запускаем инструментальные (UI) тесты на устройстве в облаке.
+      # Список доступных устройств: gcloud firebase test android models list
+      - name: Run UI tests on Firebase Test Lab
+        run: |
+          gcloud firebase test android run \
+            --type instrumentation \
+            --app app/build/outputs/apk/debug/app-debug.apk \
+            --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
+            --device model=MediumPhone.arm,version=33,locale=en,orientation=portrait \
+            --timeout 10m
