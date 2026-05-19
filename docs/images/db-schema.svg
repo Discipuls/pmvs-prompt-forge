@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" font-family="Segoe UI, Arial, sans-serif" font-size="14">
+  <rect width="720" height="300" fill="#ffffff"/>
+
+  <!-- prompts -->
+  <g>
+    <rect x="40" y="40" width="300" height="208" fill="#f4f6fb" stroke="#3b5bdb" stroke-width="2" rx="6"/>
+    <rect x="40" y="40" width="300" height="34" fill="#3b5bdb" rx="6"/>
+    <rect x="40" y="58" width="300" height="16" fill="#3b5bdb"/>
+    <text x="190" y="62" fill="#ffffff" font-weight="bold" text-anchor="middle">prompts</text>
+
+    <line x1="40" y1="74" x2="340" y2="74" stroke="#c5cee0"/>
+    <text x="56" y="96">🔑 id : INTEGER  (PK)</text>
+    <line x1="40" y1="108" x2="340" y2="108" stroke="#c5cee0"/>
+    <text x="56" y="130">raw_prompt : TEXT</text>
+    <line x1="40" y1="142" x2="340" y2="142" stroke="#c5cee0"/>
+    <text x="56" y="164">improved_prompt : TEXT</text>
+    <line x1="40" y1="176" x2="340" y2="176" stroke="#c5cee0"/>
+    <text x="56" y="198">rating : INTEGER</text>
+    <line x1="40" y1="210" x2="340" y2="210" stroke="#c5cee0"/>
+    <text x="56" y="232">timestamp : INTEGER</text>
+  </g>
+
+  <!-- user_preferences -->
+  <g>
+    <rect x="400" y="40" width="280" height="106" fill="#f4f6fb" stroke="#2f9e44" stroke-width="2" rx="6"/>
+    <rect x="400" y="40" width="280" height="34" fill="#2f9e44" rx="6"/>
+    <rect x="400" y="58" width="280" height="16" fill="#2f9e44"/>
+    <text x="540" y="62" fill="#ffffff" font-weight="bold" text-anchor="middle">user_preferences</text>
+
+    <line x1="400" y1="74" x2="680" y2="74" stroke="#c5cee0"/>
+    <text x="416" y="96">🔑 id : INTEGER  (PK = 1)</text>
+    <line x1="400" y1="108" x2="680" y2="108" stroke="#c5cee0"/>
+    <text x="416" y="130">custom_instructions : TEXT</text>
+  </g>
+
+  <text x="360" y="278" fill="#8a94a6" text-anchor="middle" font-size="12">База данных SQLite (Room) — promptforge.db</text>
+</svg>
