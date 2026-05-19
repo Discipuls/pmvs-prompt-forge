@@ -1,19 +1,17 @@
 name: Tests
 
-# Запускаем тесты при каждом push и pull request.
 on:
   push:
+    branches: [ main, master, develop ]
   pull_request:
+    branches: [ main, master, develop ]
   workflow_dispatch:
 
 jobs:
-  # ----------------------------------------------------------------
-  # 1. Unit-тесты: запускаются прямо на раннере GitHub (на JVM),
-  #    устройство/эмулятор не нужны.
-  # ----------------------------------------------------------------
   unit-tests:
     name: Unit tests (JVM)
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +24,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
@@ -37,20 +38,11 @@ jobs:
           name: unit-test-report
           path: app/build/reports/tests/
 
-  # ----------------------------------------------------------------
-  # 2. UI / инструментальные тесты: на раннере GitHub нет реального
-  #    Android-устройства, поэтому собираем два APK и отправляем их
-  #    в Firebase Test Lab — облачную ферму устройств Google.
-  #
-  #    Перед запуском в репозитории нужно задать два секрета
-  #    (Settings -> Secrets and variables -> Actions):
-  #      GCP_SA_KEY      — JSON ключа сервисного аккаунта Google Cloud
-  #      GCP_PROJECT_ID  — id проекта Firebase / Google Cloud
-  # ----------------------------------------------------------------
   ui-tests-firebase:
     name: UI tests (Firebase Test Lab)
     runs-on: ubuntu-latest
     needs: unit-tests
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,9 +56,18 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Собираем APK приложения и APK с тестами.
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build app and test APKs
         run: ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Verify APKs exist
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          test -f app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          ls -lah app/build/outputs/apk/debug/
+          ls -lah app/build/outputs/apk/androidTest/debug/
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -77,14 +78,29 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      # Запускаем инструментальные (UI) тесты на устройстве в облаке.
-      # Список доступных устройств: gcloud firebase test android models list
+  
       - name: Run UI tests on Firebase Test Lab
         run: |
+          mkdir -p test-lab-results
           gcloud firebase test android run \
             --type instrumentation \
             --app app/build/outputs/apk/debug/app-debug.apk \
             --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
             --device model=MediumPhone.arm,version=33,locale=en,orientation=portrait \
-            --timeout 10m
+            --timeout 20m \
+            --use-orchestrator \
+            --format=json > test-lab-results/result.json
+
+      - name: Upload Firebase Test Lab metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-test-lab-metadata
+          path: test-lab-results/
+
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
