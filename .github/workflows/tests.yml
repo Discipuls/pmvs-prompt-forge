@@ -72,4 +72,6 @@ jobs:
             --app app/build/outputs/apk/debug/app-debug.apk \
             --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
             --device model=a10,version=33,locale=en,orientation=portrait \
+            --results-bucket=gs://${{ secrets.FTL_RESULTS_BUCKET }} \
+            --results-dir=github-actions/${{ github.run_id }} \
             --timeout 10m
