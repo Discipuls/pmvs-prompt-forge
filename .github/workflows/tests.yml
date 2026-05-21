@@ -62,16 +62,18 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Verify available test models
-        run: gcloud firebase test android models list --format="table(id,name,supportedVersionIds)"
-
+      - name: Verify model compatibility
+        run: |
+          gcloud firebase test android models describe a10
+          gcloud firebase test android versions list
+      
       - name: Run UI tests on Firebase Test Lab
         run: |
           gcloud firebase test android run \
             --type instrumentation \
             --app app/build/outputs/apk/debug/app-debug.apk \
             --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
-            --device model=a10,version=33,locale=en,orientation=portrait \
+            --device model=a10,version=REPLACE_WITH_SUPPORTED_VERSION,locale=en,orientation=portrait \
             --results-bucket=gs://${{ secrets.FTL_RESULTS_BUCKET }} \
             --results-dir=github-actions/${{ github.run_id }} \
             --timeout 10m
